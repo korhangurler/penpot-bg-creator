@@ -1,6 +1,3 @@
-const BASE_URL = "https://korhangurler.github.io/penpot-bg-creator";
-const SHAPE_ASSETS_URL = `${BASE_URL}/assets/shapes/shapes.json`;
-
 const definitions = [
   { id: "opacity", label: "Shape opacity", min: 0.005, max: 0.5, step: 0.005, value: 0.075, format: (v) => Number(v).toFixed(3).replace(".", ",") },
   { id: "count", label: "Shape count", min: 1, max: 50, step: 1, value: 14 },
@@ -42,6 +39,7 @@ function createControl(definition) {
 
   const range = wrapper.querySelector(`#${definition.id}`);
   const text = wrapper.querySelector(`#${definition.id}Value`);
+  const reset = wrapper.querySelector(".reset-button");
 
   range.addEventListener("input", () => {
     text.value = formatValue(definition, range.value);
@@ -55,7 +53,7 @@ function createControl(definition) {
     text.value = formatValue(definition, value);
   });
 
-  wrapper.querySelector(".reset-button").addEventListener("click", () => {
+  reset.addEventListener("click", () => {
     range.value = String(definition.value);
     text.value = formatValue(definition, definition.value);
   });
@@ -80,35 +78,34 @@ function extractSvgData(svgText, asset) {
   if (viewBoxText) {
     const values = viewBoxText.trim().split(/[\s,]+/).map(Number);
     if (values.length === 4 && values.every(Number.isFinite)) viewBox = values;
+  } else {
+    viewBox = [
+      0, 0,
+      parseFloat(svg.getAttribute("width")) || 100,
+      parseFloat(svg.getAttribute("height")) || 100
+    ];
   }
 
   return {
     ...asset,
     content: svg.innerHTML,
-    viewBox: {
-      x: viewBox[0],
-      y: viewBox[1],
-      width: viewBox[2],
-      height: viewBox[3],
-    },
+    viewBox: { x: viewBox[0], y: viewBox[1], width: viewBox[2], height: viewBox[3] }
   };
 }
+
 async function loadShapeAssets() {
-  const listResponse = await fetch(
-    `${SHAPE_ASSETS_URL}?v=${Date.now()}`,
-    {
-      cache: "no-store"
-    }
-  );
+  const pageUrl = new URL(window.location.href);
+  pageUrl.search = "";
+  pageUrl.hash = "";
+
+  const listUrl = new URL("./assets/shapes/shapes.json", pageUrl);
+  const listResponse = await fetch(`${listUrl.href}?v=${Date.now()}`, { cache: "no-store" });
 
   if (!listResponse.ok) {
-    throw new Error(
-      `shapes.json yüklenemedi: HTTP ${listResponse.status}`
-    );
+    throw new Error(`shapes.json yüklenemedi: HTTP ${listResponse.status}`);
   }
 
   const assets = await listResponse.json();
-
   if (!Array.isArray(assets) || assets.length === 0) {
     throw new Error("SVG tanımı bulunamadı.");
   }
@@ -116,34 +113,22 @@ async function loadShapeAssets() {
   const loaded = [];
 
   for (const asset of assets) {
-    const assetUrl = new URL(asset.src, `${BASE_URL}/`).href;
-
-    const response = await fetch(
-      `${assetUrl}?v=${Date.now()}`,
-      {
-        cache: "no-store"
-      }
+    const assetUrl = new URL(
+      `./assets/shapes/${asset.src.split("/").pop()}`,
+      pageUrl
     );
 
+    const response = await fetch(`${assetUrl.href}?v=${Date.now()}`, { cache: "no-store" });
     if (!response.ok) {
-      throw new Error(
-        `${asset.src} yüklenemedi: HTTP ${response.status}`
-      );
+      throw new Error(`${asset.src} yüklenemedi: HTTP ${response.status}`);
     }
 
-    const svgText = await response.text();
-
-    loaded.push(
-      extractSvgData(svgText, asset)
-    );
+    loaded.push(extractSvgData(await response.text(), asset));
   }
 
   loadedShapeAssets = loaded;
-
   libraryStatus.className = "library-status success";
-  libraryStatus.textContent =
-    `${loaded.length} SVG şekli yüklendi.`;
-
+  libraryStatus.textContent = `${loaded.length} SVG şekli yüklendi.`;
   generateButton.disabled = false;
 }
 
@@ -152,10 +137,12 @@ function getSettings() {
     autoColor: autoColor.checked,
     color: shapeColor.value,
     replaceExisting: replaceExisting.checked,
-    ...Object.fromEntries(definitions.map((definition) => [
-      definition.id,
-      Number(document.getElementById(definition.id).value)
-    ]))
+    ...Object.fromEntries(
+      definitions.map((definition) => [
+        definition.id,
+        Number(document.getElementById(definition.id).value)
+      ])
+    )
   };
 }
 
@@ -194,7 +181,7 @@ document.getElementById("closeButton").addEventListener("click", () => {
 
 window.addEventListener("message", (event) => {
   const message = event.data;
-  if (!message || typeof message !== "object") return;
+  if (!message || typeof message !== "object" || message.source !== "penpot") return;
 
   if (message.type === "status") {
     status.className = `status ${message.ok ? "success" : "error"}`;
@@ -205,8 +192,11 @@ window.addEventListener("message", (event) => {
     const selectionText = document.getElementById("selectionText");
 
     if (message.count === 1) {
-      selectionText.textContent = `${message.name || "Seçim"} · ${Math.round(message.width)} × ${Math.round(message.height)}`;
-      if (autoColor.checked && message.autoColor) shapeColor.value = message.autoColor;
+      selectionText.textContent =
+        `${message.name || "Seçim"} · ${Math.round(message.width)} × ${Math.round(message.height)}`;
+      if (autoColor.checked && message.autoColor) {
+        shapeColor.value = message.autoColor;
+      }
     } else if (message.count > 1) {
       selectionText.textContent = "Lütfen yalnızca bir öğe seçin";
     } else {
@@ -216,8 +206,10 @@ window.addEventListener("message", (event) => {
 });
 
 loadShapeAssets().catch((error) => {
+  console.error(error);
   libraryStatus.className = "library-status error";
-  libraryStatus.textContent = error instanceof Error ? error.message : "SVG dosyaları yüklenemedi.";
+  libraryStatus.textContent =
+    error instanceof Error ? error.message : "SVG dosyaları yüklenemedi.";
 });
 
 parent.postMessage({ type: "selection-info" }, "*");

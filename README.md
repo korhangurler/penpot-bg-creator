@@ -1,4 +1,22 @@
-# Penpot Random SVG Background
+# Penpot BG Creator
+
+Bu klasör doğrudan GitHub Pages'te yayınlanmak için hazırdır.
+
+## Kurulum
+
+ZIP içindeki dosyaları `penpot-bg-creator` reposunun köküne kopyala:
+
+```bash
+git add .
+git commit -m "Install working Penpot plugin"
+git push
+```
+
+GitHub → Repository → Settings → Pages:
+
+- Source: Deploy from a branch
+- Branch: main
+- Folder: /(root)
 
 Manifest adresi:
 
@@ -6,13 +24,10 @@ Manifest adresi:
 https://korhangurler.github.io/penpot-bg-creator/manifest.json
 ```
 
-Varsayılan boyutlar seçili alanın kısa kenarına göre yüzde olarak hesaplanır:
+Penpot'ta eski eklentiyi kaldırıp bu manifest URL'siyle yeniden kur.
 
-- Minimum: %10
-- Maksimum: %26
-- Boşluk: %2.5
-- Adet: 14
-- Dönüş: 180 derece
+## Önemli
 
-Şekiller, döndürülmüş dış sınırlarını kapsayan güvenli çemberler kullanılarak yerleştirilir ve üst üste bindirilmez.
-# penpot-bg-creator
+`plugin.js` içinde sabit IP/domain yoktur. `penpot.ui.open()` query-only URL kullanır ve UI aynı GitHub Pages dizinindeki `index.html` üzerinden açılır.
+
+SVG'ler `assets/shapes/` içinden yüklenir.

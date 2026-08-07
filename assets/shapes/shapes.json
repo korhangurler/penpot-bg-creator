@@ -118,5 +118,11 @@
     "aspect": 2.1666666666666665,
     "shapeId": "assets/shapes/squiggle.svg",
     "shapeIndex": 19
+  },
+  {
+    "src": "assets/shapes/type.svg",
+    "aspect": 2.1666666666666665,
+    "shapeId": "assets/shapes/type.svg",
+    "shapeIndex": 20
   }
 ]
