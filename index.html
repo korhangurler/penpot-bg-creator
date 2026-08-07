@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Random SVG Background</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="panel">
+    <header class="header">
+      <div>
+        <h1>Background Creator</h1>
+        <p id="selectionText">Bir board veya şekil seçin</p>
+      </div>
+      <button id="closeButton" class="icon-button" type="button">×</button>
+    </header>
+
+    <section class="card">
+      <label class="check-row">
+        <input id="autoColor" type="checkbox" checked>
+        <span>Auto shape color</span>
+      </label>
+      <div id="manualColorRow" class="color-row is-hidden">
+        <span>Shape color</span>
+        <input id="shapeColor" type="color" value="#ffffff">
+      </div>
+    </section>
+
+    <section id="controls" class="controls"></section>
+
+    <section class="card compact">
+      <label class="check-row">
+        <input id="replaceExisting" type="checkbox" checked>
+        <span>Önceki arka planı değiştir</span>
+      </label>
+    </section>
+
+    <div id="libraryStatus" class="library-status">SVG şekilleri yükleniyor…</div>
+    <div id="status" class="status">Hazır.</div>
+
+    <footer class="footer">
+      <button id="resetAll" class="secondary" type="button">Tümünü sıfırla</button>
+      <button id="generate" class="primary" type="button" disabled>Arka plan oluştur</button>
+    </footer>
+  </main>
+  <script src="main.js"></script>
+</body>
+</html>

@@ -1,0 +1,122 @@
+[
+  {
+    "src": "assets/shapes/brush.svg",
+    "aspect": 2.1666666666666665,
+    "shapeId": "assets/shapes/brush.svg",
+    "shapeIndex": 0
+  },
+  {
+    "src": "assets/shapes/blob.svg",
+    "aspect": 1,
+    "shapeId": "assets/shapes/blob.svg",
+    "shapeIndex": 1
+  },
+  {
+    "src": "assets/shapes/capsule.svg",
+    "aspect": 2.1818181818181817,
+    "shapeId": "assets/shapes/capsule.svg",
+    "shapeIndex": 2
+  },
+  {
+    "src": "assets/shapes/card.svg",
+    "aspect": 1.4666666666666666,
+    "shapeId": "assets/shapes/card.svg",
+    "shapeIndex": 3
+  },
+  {
+    "src": "assets/shapes/pill-grid.svg",
+    "aspect": 1.2352941176470589,
+    "shapeId": "assets/shapes/pill-grid.svg",
+    "shapeIndex": 4
+  },
+  {
+    "src": "assets/shapes/rounded-arrow.svg",
+    "aspect": 1.4375,
+    "shapeId": "assets/shapes/rounded-arrow.svg",
+    "shapeIndex": 5
+  },
+  {
+    "src": "assets/shapes/rounded-bar-stack.svg",
+    "aspect": 1.3529411764705883,
+    "shapeId": "assets/shapes/rounded-bar-stack.svg",
+    "shapeIndex": 6
+  },
+  {
+    "src": "assets/shapes/rounded-cloud.svg",
+    "aspect": 1.6666666666666667,
+    "shapeId": "assets/shapes/rounded-cloud.svg",
+    "shapeIndex": 7
+  },
+  {
+    "src": "assets/shapes/rounded-diamond.svg",
+    "aspect": 1,
+    "shapeId": "assets/shapes/rounded-diamond.svg",
+    "shapeIndex": 8
+  },
+  {
+    "src": "assets/shapes/rounded-ticket.svg",
+    "aspect": 1.8461538461538463,
+    "shapeId": "assets/shapes/rounded-ticket.svg",
+    "shapeIndex": 9
+  },
+  {
+    "src": "assets/shapes/ring.svg",
+    "aspect": 1,
+    "shapeId": "assets/shapes/ring.svg",
+    "shapeIndex": 10
+  },
+  {
+    "src": "assets/shapes/soft-chat.svg",
+    "aspect": 1.2941176470588236,
+    "shapeId": "assets/shapes/soft-chat.svg",
+    "shapeIndex": 11
+  },
+  {
+    "src": "assets/shapes/soft-corner.svg",
+    "aspect": 1,
+    "shapeId": "assets/shapes/soft-corner.svg",
+    "shapeIndex": 12
+  },
+  {
+    "src": "assets/shapes/soft-moon.svg",
+    "aspect": 1,
+    "shapeId": "assets/shapes/soft-moon.svg",
+    "shapeIndex": 13
+  },
+  {
+    "src": "assets/shapes/soft-plus.svg",
+    "aspect": 1,
+    "shapeId": "assets/shapes/soft-plus.svg",
+    "shapeIndex": 14
+  },
+  {
+    "src": "assets/shapes/soft-triangle.svg",
+    "aspect": 1.1176470588235294,
+    "shapeId": "assets/shapes/soft-triangle.svg",
+    "shapeIndex": 15
+  },
+  {
+    "src": "assets/shapes/soft-wave-block.svg",
+    "aspect": 1.6666666666666667,
+    "shapeId": "assets/shapes/soft-wave-block.svg",
+    "shapeIndex": 16
+  },
+  {
+    "src": "assets/shapes/soft-window.svg",
+    "aspect": 1.3125,
+    "shapeId": "assets/shapes/soft-window.svg",
+    "shapeIndex": 17
+  },
+  {
+    "src": "assets/shapes/spark.svg",
+    "aspect": 1,
+    "shapeId": "assets/shapes/spark.svg",
+    "shapeIndex": 18
+  },
+  {
+    "src": "assets/shapes/squiggle.svg",
+    "aspect": 2.1666666666666665,
+    "shapeId": "assets/shapes/squiggle.svg",
+    "shapeIndex": 19
+  }
+]

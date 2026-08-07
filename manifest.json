@@ -1,0 +1,11 @@
+{
+  "name": "Random SVG Background",
+  "description": "Creates non-overlapping random SVG backgrounds from assets/shapes.",
+  "version": 2,
+  "code": "plugin.js",
+  "icon": "icon.svg",
+  "permissions": [
+    "content:read",
+    "content:write"
+  ]
+}
