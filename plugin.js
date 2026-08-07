@@ -1,67 +1,28 @@
-const BASE_URL = "https://korhangurler.github.io/penpot-bg-creator";
+const UI_HTML = `
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-async function openPluginUI() {
-  const [htmlResponse, cssResponse, jsResponse] = await Promise.all([
-    fetch(`${BASE_URL}/index.html?v=${Date.now()}`),
-    fetch(`${BASE_URL}/style.css?v=${Date.now()}`),
-    fetch(`${BASE_URL}/main.js?v=${Date.now()}`)
-  ]);
+  <style>
+    /* BURAYA style.css İÇERİĞİNİN TAMAMI GELECEK */
+  </style>
+</head>
 
-  if (!htmlResponse.ok) {
-    throw new Error(`index.html yüklenemedi: ${htmlResponse.status}`);
-  }
+<body>
+  <!-- BURAYA index.html BODY İÇERİĞİNİN TAMAMI GELECEK -->
 
-  if (!cssResponse.ok) {
-    throw new Error(`style.css yüklenemedi: ${cssResponse.status}`);
-  }
+  <script>
+    /* BURAYA main.js İÇERİĞİNİN TAMAMI GELECEK */
+  <\/script>
+</body>
+</html>
+`;
 
-  if (!jsResponse.ok) {
-    throw new Error(`main.js yüklenemedi: ${jsResponse.status}`);
-  }
-
-  let html = await htmlResponse.text();
-  const css = await cssResponse.text();
-  const js = await jsResponse.text();
-
-  html = html
-    .replace(
-      /<link[^>]*href=["']\.?\/?style\.css["'][^>]*>/i,
-      `<style>${css}</style>`
-    )
-    .replace(
-      /<script[^>]*src=["']\.?\/?main\.js["'][^>]*><\/script>/i,
-      `<script>${js}<\/script>`
-    );
-
-  penpot.ui.open("Random SVG Background", html, {
-    width: 420,
-    height: 760
-  });
-}
-
-openPluginUI().catch((error) => {
-  console.error("Plugin UI açılamadı:", error);
-
-  penpot.ui.open(
-    "Random SVG Background",
-    `
-      <html>
-        <body style="
-          background:#18181a;
-          color:white;
-          font-family:sans-serif;
-          padding:20px;
-        ">
-          <h3>Plugin UI yüklenemedi</h3>
-          <pre>${String(error.message || error)}</pre>
-        </body>
-      </html>
-    `,
-    {
-      width: 420,
-      height: 300
-    }
-  );
+penpot.ui.open("Random SVG Background", UI_HTML, {
+  width: 420,
+  height: 760,
 });
 
 function clamp(value, min, max) {

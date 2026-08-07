@@ -93,25 +93,57 @@ function extractSvgData(svgText, asset) {
     },
   };
 }
-
 async function loadShapeAssets() {
-  const listResponse = await fetch(`${SHAPE_ASSETS_URL}?v=${Date.now()}`, { cache: "no-store" });
-  if (!listResponse.ok) throw new Error(`shapes.json yüklenemedi: HTTP ${listResponse.status}`);
+  const listResponse = await fetch(
+    `${SHAPE_ASSETS_URL}?v=${Date.now()}`,
+    {
+      cache: "no-store"
+    }
+  );
+
+  if (!listResponse.ok) {
+    throw new Error(
+      `shapes.json yüklenemedi: HTTP ${listResponse.status}`
+    );
+  }
 
   const assets = await listResponse.json();
-  if (!Array.isArray(assets) || assets.length === 0) throw new Error("SVG tanımı bulunamadı.");
+
+  if (!Array.isArray(assets) || assets.length === 0) {
+    throw new Error("SVG tanımı bulunamadı.");
+  }
 
   const loaded = [];
 
   for (const asset of assets) {
-    const response = await fetch(`${asset.src}?v=${Date.now()}`, { cache: "no-store" });
-    if (!response.ok) throw new Error(`${asset.src} yüklenemedi: HTTP ${response.status}`);
-    loaded.push(extractSvgData(await response.text(), asset));
+    const assetUrl = new URL(asset.src, `${BASE_URL}/`).href;
+
+    const response = await fetch(
+      `${assetUrl}?v=${Date.now()}`,
+      {
+        cache: "no-store"
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(
+        `${asset.src} yüklenemedi: HTTP ${response.status}`
+      );
+    }
+
+    const svgText = await response.text();
+
+    loaded.push(
+      extractSvgData(svgText, asset)
+    );
   }
 
   loadedShapeAssets = loaded;
+
   libraryStatus.className = "library-status success";
-  libraryStatus.textContent = `${loaded.length} SVG şekli yüklendi.`;
+  libraryStatus.textContent =
+    `${loaded.length} SVG şekli yüklendi.`;
+
   generateButton.disabled = false;
 }
 
