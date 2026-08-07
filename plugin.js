@@ -1,18 +1,67 @@
-const UI_URL = "https://korhangurler.github.io/penpot-bg-creator/index.html";
+const BASE_URL = "https://korhangurler.github.io/penpot-bg-creator";
 
-const response = await fetch(UI_URL, {
-  cache: "no-store"
-});
+async function openPluginUI() {
+  const [htmlResponse, cssResponse, jsResponse] = await Promise.all([
+    fetch(`${BASE_URL}/index.html?v=${Date.now()}`),
+    fetch(`${BASE_URL}/style.css?v=${Date.now()}`),
+    fetch(`${BASE_URL}/main.js?v=${Date.now()}`)
+  ]);
 
-if (!response.ok) {
-  throw new Error(`Plugin UI yüklenemedi: HTTP ${response.status}`);
+  if (!htmlResponse.ok) {
+    throw new Error(`index.html yüklenemedi: ${htmlResponse.status}`);
+  }
+
+  if (!cssResponse.ok) {
+    throw new Error(`style.css yüklenemedi: ${cssResponse.status}`);
+  }
+
+  if (!jsResponse.ok) {
+    throw new Error(`main.js yüklenemedi: ${jsResponse.status}`);
+  }
+
+  let html = await htmlResponse.text();
+  const css = await cssResponse.text();
+  const js = await jsResponse.text();
+
+  html = html
+    .replace(
+      /<link[^>]*href=["']\.?\/?style\.css["'][^>]*>/i,
+      `<style>${css}</style>`
+    )
+    .replace(
+      /<script[^>]*src=["']\.?\/?main\.js["'][^>]*><\/script>/i,
+      `<script>${js}<\/script>`
+    );
+
+  penpot.ui.open("Random SVG Background", html, {
+    width: 420,
+    height: 760
+  });
 }
 
-const html = await response.text();
+openPluginUI().catch((error) => {
+  console.error("Plugin UI açılamadı:", error);
 
-penpot.ui.open("Random SVG Background", html, {
-  width: 420,
-  height: 760,
+  penpot.ui.open(
+    "Random SVG Background",
+    `
+      <html>
+        <body style="
+          background:#18181a;
+          color:white;
+          font-family:sans-serif;
+          padding:20px;
+        ">
+          <h3>Plugin UI yüklenemedi</h3>
+          <pre>${String(error.message || error)}</pre>
+        </body>
+      </html>
+    `,
+    {
+      width: 420,
+      height: 300
+    }
+  );
 });
 
 function clamp(value, min, max) {
