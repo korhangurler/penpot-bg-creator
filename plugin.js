@@ -1,4 +1,4 @@
-const PLUGIN_BASE_URL = "http://192.168.1.100:4400";
+const PLUGIN_BASE_URL = "https://korhangurler.github.io/penpot-bg-creator";
 const UI_URL = `${PLUGIN_BASE_URL}/index.html`;
 
 penpot.ui.open("Random SVG Background", UI_URL, {

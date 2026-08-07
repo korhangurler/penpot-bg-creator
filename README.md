@@ -1,15 +1,9 @@
 # Penpot Random SVG Background
 
-## Kurulum
-
-```bash
-sudo docker compose up -d
-```
-
 Manifest adresi:
 
 ```text
-http://192.168.1.100:4400/manifest.json
+https://korhangurler.github.io/penpot-bg-creator/manifest.json
 ```
 
 Varsayılan boyutlar seçili alanın kısa kenarına göre yüzde olarak hesaplanır:
