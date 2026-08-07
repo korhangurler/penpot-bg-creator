@@ -1,4 +1,8 @@
-const SHAPE_ASSETS_URL = "assets/shapes/shapes.json";
+const PLUGIN_BASE_URL =
+  "https://korhangurler.github.io/penpot-bg-creator";
+
+const SHAPE_ASSETS_URL =
+  `${PLUGIN_BASE_URL}/assets/shapes/shapes.json`;
 
 const definitions = [
   { id: "opacity", label: "Shape opacity", min: 0.005, max: 0.5, step: 0.005, value: 0.075, format: (v) => Number(v).toFixed(3).replace(".", ",") },
