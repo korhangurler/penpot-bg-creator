@@ -1,7 +1,16 @@
-const PLUGIN_BASE_URL = "https://korhangurler.github.io/penpot-bg-creator";
-const UI_URL = `${PLUGIN_BASE_URL}/index.html`;
+const UI_URL = "https://korhangurler.github.io/penpot-bg-creator/index.html";
 
-penpot.ui.open("Random SVG Background", UI_URL, {
+const response = await fetch(UI_URL, {
+  cache: "no-store"
+});
+
+if (!response.ok) {
+  throw new Error(`Plugin UI yüklenemedi: HTTP ${response.status}`);
+}
+
+const html = await response.text();
+
+penpot.ui.open("Random SVG Background", html, {
   width: 420,
   height: 760,
 });
