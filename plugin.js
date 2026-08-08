@@ -85,27 +85,27 @@ function createAssetPicker(assets) {
     pool = shuffle(assets);
   }
 
-  return function nextAsset() {
+  return function pick() {
     if (!pool.length) {
       refill();
     }
 
-    let chosenIndex = -1;
+    let index = -1;
 
     for (let i = pool.length - 1; i >= 0; i--) {
       const id = pool[i].shapeId || pool[i].src;
 
       if (!history.includes(id)) {
-        chosenIndex = i;
+        index = i;
         break;
       }
     }
 
-    if (chosenIndex < 0) {
-      chosenIndex = pool.length - 1;
+    if (index < 0) {
+      index = pool.length - 1;
     }
 
-    const [asset] = pool.splice(chosenIndex, 1);
+    const [asset] = pool.splice(index, 1);
     const id = asset.shapeId || asset.src;
 
     history.push(id);
@@ -133,352 +133,535 @@ function shapeDimensions(size, aspect) {
 }
 
 function createSizeSequence(count, minSize, maxSize) {
-  const small = [];
-  const medium = [];
-  const large = [];
-
-  for (let i = 0; i < count; i++) {
-    const group = i % 5;
-
-    if (group === 0) {
-      large.push(randomBetween(0.76, 1));
-    } else if (group === 1 || group === 3) {
-      small.push(randomBetween(0, 0.38));
-    } else {
-      medium.push(randomBetween(0.38, 0.76));
-    }
-  }
-
-  const sequence = [];
-  const queues = {
-    large: shuffle(large),
-    medium: shuffle(medium),
-    small: shuffle(small),
-  };
+  const ratios = [];
 
   const pattern = [
-    "large",
-    "small",
-    "medium",
-    "small",
-    "medium",
+    [0.72, 1],
+    [0.05, 0.32],
+    [0.38, 0.65],
+    [0.12, 0.42],
+    [0.48, 0.8],
+    [0.05, 0.3],
+    [0.35, 0.62],
   ];
 
-  let index = 0;
+  for (let i = 0; i < count; i++) {
+    const range = pattern[i % pattern.length];
 
-  while (sequence.length < count) {
-    const type = pattern[index % pattern.length];
-    let value = queues[type].pop();
-
-    if (value === undefined) {
-      const remaining = [
-        ...queues.large,
-        ...queues.medium,
-        ...queues.small,
-      ];
-
-      if (!remaining.length) {
-        break;
-      }
-
-      value = remaining[Math.floor(Math.random() * remaining.length)];
-
-      for (const key of Object.keys(queues)) {
-        const found = queues[key].indexOf(value);
-
-        if (found >= 0) {
-          queues[key].splice(found, 1);
-          break;
-        }
-      }
-    }
-
-    sequence.push(
-      minSize +
-        (maxSize - minSize) *
-          value
+    ratios.push(
+      randomBetween(
+        range[0],
+        range[1]
+      )
     );
-
-    index++;
   }
 
-  return sequence;
+  return ratios.map(
+    (ratio) =>
+      minSize +
+      (maxSize - minSize) *
+        ratio
+  );
 }
 
-function createSideSequence(edgeCount) {
-  const sides = ["top", "right", "bottom", "left"];
+function halton(index, base) {
+  let result = 0;
+  let fraction = 1 / base;
+  let value = index;
+
+  while (value > 0) {
+    result +=
+      fraction *
+      (value % base);
+
+    value =
+      Math.floor(
+        value / base
+      );
+
+    fraction /= base;
+  }
+
+  return result;
+}
+
+function createInteriorCandidates(width, height, total) {
+  const points = [];
+  const offset = Math.floor(Math.random() * 5000) + 1;
+
+  for (let i = 0; i < total; i++) {
+    const index = offset + i + 1;
+
+    let x = halton(index, 2);
+    let y = halton(index, 3);
+
+    x += randomBetween(-0.018, 0.018);
+    y += randomBetween(-0.018, 0.018);
+
+    x = clamp(x, 0.025, 0.975);
+    y = clamp(y, 0.025, 0.975);
+
+    points.push({
+      x: x * width,
+      y: y * height,
+      edge: false,
+      side: null,
+    });
+  }
+
+  points.push({
+    x: width * 0.5,
+    y: height * 0.5,
+    edge: false,
+    side: null,
+  });
+
+  points.push({
+    x: width * 0.33,
+    y: height * 0.5,
+    edge: false,
+    side: null,
+  });
+
+  points.push({
+    x: width * 0.67,
+    y: height * 0.5,
+    edge: false,
+    side: null,
+  });
+
+  points.push({
+    x: width * 0.5,
+    y: height * 0.33,
+    edge: false,
+    side: null,
+  });
+
+  points.push({
+    x: width * 0.5,
+    y: height * 0.67,
+    edge: false,
+    side: null,
+  });
+
+  return points;
+}
+
+function createEdgeCandidates(width, height, total) {
   const result = [];
 
-  const start = Math.floor(Math.random() * sides.length);
+  const sides = [
+    "top",
+    "right",
+    "bottom",
+    "left",
+  ];
 
-  for (let i = 0; i < edgeCount; i++) {
-    result.push(sides[(start + i) % sides.length]);
+  const offset = Math.random();
+
+  for (let i = 0; i < total; i++) {
+    const side =
+      sides[i % 4];
+
+    let t =
+      ((i / 4 + offset) /
+        Math.max(1, Math.ceil(total / 4))) %
+      1;
+
+    t += randomBetween(-0.05, 0.05);
+    t = clamp(t, 0.03, 0.97);
+
+    if (side === "top") {
+      result.push({
+        x: width * t,
+        y: 0,
+        edge: true,
+        side,
+      });
+    }
+
+    if (side === "right") {
+      result.push({
+        x: width,
+        y: height * t,
+        edge: true,
+        side,
+      });
+    }
+
+    if (side === "bottom") {
+      result.push({
+        x: width * t,
+        y: height,
+        edge: true,
+        side,
+      });
+    }
+
+    if (side === "left") {
+      result.push({
+        x: 0,
+        y: height * t,
+        edge: true,
+        side,
+      });
+    }
   }
 
-  return shuffle(result);
-}
-
-function edgeCandidate(side, width, height, shapeWidth, shapeHeight) {
-  const bleed = randomBetween(0.2, 0.55);
-  const tangentPadding = 0.07;
-
-  if (side === "top") {
-    return {
-      x: randomBetween(
-        width * tangentPadding,
-        width * (1 - tangentPadding)
-      ),
-      y: shapeHeight * (0.5 - bleed),
-    };
-  }
-
-  if (side === "bottom") {
-    return {
-      x: randomBetween(
-        width * tangentPadding,
-        width * (1 - tangentPadding)
-      ),
-      y: height - shapeHeight * (0.5 - bleed),
-    };
-  }
-
-  if (side === "left") {
-    return {
-      x: shapeWidth * (0.5 - bleed),
-      y: randomBetween(
-        height * tangentPadding,
-        height * (1 - tangentPadding)
-      ),
-    };
-  }
-
-  return {
-    x: width - shapeWidth * (0.5 - bleed),
-    y: randomBetween(
-      height * tangentPadding,
-      height * (1 - tangentPadding)
-    ),
-  };
-}
-
-function interiorCandidate(width, height, shapeWidth, shapeHeight) {
-  const horizontalPadding = Math.min(
-    width * 0.08,
-    shapeWidth * 0.45
-  );
-
-  const verticalPadding = Math.min(
-    height * 0.06,
-    shapeHeight * 0.45
-  );
-
-  return {
-    x: randomBetween(
-      horizontalPadding,
-      width - horizontalPadding
-    ),
-    y: randomBetween(
-      verticalPadding,
-      height - verticalPadding
-    ),
-  };
+  return result;
 }
 
 function candidateRadius(shapeWidth, shapeHeight) {
-  const shortSide = Math.min(shapeWidth, shapeHeight);
-  const longSide = Math.max(shapeWidth, shapeHeight);
-
-  return shortSide * 0.36 + longSide * 0.18;
-}
-
-function signedDistance(candidate, item) {
-  const dx = candidate.x - item.x;
-  const dy = candidate.y - item.y;
-
   return (
-    Math.sqrt(dx * dx + dy * dy) -
-    candidate.radius -
-    item.radius
+    Math.min(shapeWidth, shapeHeight) *
+      0.32 +
+    Math.max(shapeWidth, shapeHeight) *
+      0.15
   );
 }
 
-function minimumDistance(candidate, placed) {
+function moveEdgeCandidate(
+  candidate,
+  shapeWidth,
+  shapeHeight
+) {
+  if (!candidate.edge) {
+    return {
+      x: candidate.x,
+      y: candidate.y,
+    };
+  }
+
+  const bleed =
+    randomBetween(
+      0.22,
+      0.58
+    );
+
+  if (candidate.side === "left") {
+    return {
+      x:
+        shapeWidth *
+        (0.5 - bleed),
+
+      y:
+        candidate.y,
+    };
+  }
+
+  if (candidate.side === "right") {
+    return {
+      x:
+        candidate.x -
+        shapeWidth *
+          (0.5 - bleed),
+
+      y:
+        candidate.y,
+    };
+  }
+
+  if (candidate.side === "top") {
+    return {
+      x:
+        candidate.x,
+
+      y:
+        shapeHeight *
+        (0.5 - bleed),
+    };
+  }
+
+  return {
+    x:
+      candidate.x,
+
+    y:
+      candidate.y -
+      shapeHeight *
+        (0.5 - bleed),
+  };
+}
+
+function minimumClearance(candidate, placed) {
   if (!placed.length) {
     return Infinity;
   }
 
-  let minimum = Infinity;
+  let minimum =
+    Infinity;
 
   for (const item of placed) {
-    minimum = Math.min(
-      minimum,
-      signedDistance(candidate, item)
-    );
+    const dx =
+      candidate.x -
+      item.x;
+
+    const dy =
+      candidate.y -
+      item.y;
+
+    const distance =
+      Math.sqrt(
+        dx * dx +
+        dy * dy
+      );
+
+    const clearance =
+      distance -
+      candidate.radius -
+      item.radius;
+
+    if (clearance < minimum) {
+      minimum = clearance;
+    }
   }
 
   return minimum;
 }
 
-function normalizedSpreadScore(candidate, placed, width, height) {
+function averageDistance(candidate, placed, diagonal) {
   if (!placed.length) {
-    return 10;
+    return 1;
   }
 
-  const diagonal = Math.sqrt(width * width + height * height);
-  let nearest = Infinity;
-  let average = 0;
+  let total = 0;
 
   for (const item of placed) {
-    const dx = candidate.x - item.x;
-    const dy = candidate.y - item.y;
-    const distance = Math.sqrt(dx * dx + dy * dy);
+    const dx =
+      candidate.x -
+      item.x;
 
-    nearest = Math.min(nearest, distance);
-    average += distance;
+    const dy =
+      candidate.y -
+      item.y;
+
+    total +=
+      Math.sqrt(
+        dx * dx +
+        dy * dy
+      );
   }
 
-  average /= placed.length;
-
   return (
-    nearest / diagonal * 0.76 +
-    average / diagonal * 0.24
+    total /
+    placed.length /
+    diagonal
   );
 }
 
-function edgeOutsideAmount(
-  candidate,
-  shapeWidth,
-  shapeHeight,
-  width,
-  height
-) {
-  const left = candidate.x - shapeWidth / 2;
-  const right = candidate.x + shapeWidth / 2;
-  const top = candidate.y - shapeHeight / 2;
-  const bottom = candidate.y + shapeHeight / 2;
+function regionKey(x, y, width, height) {
+  const columns = 4;
+  const rows = 4;
 
-  let amount = 0;
+  const column =
+    clamp(
+      Math.floor(
+        x / width * columns
+      ),
+      0,
+      columns - 1
+    );
 
-  if (left < 0) amount += -left;
-  if (right > width) amount += right - width;
-  if (top < 0) amount += -top;
-  if (bottom > height) amount += bottom - height;
+  const row =
+    clamp(
+      Math.floor(
+        y / height * rows
+      ),
+      0,
+      rows - 1
+    );
 
-  return amount;
+  return `${column}:${row}`;
 }
 
-function findBestEdgeCandidate(
-  side,
-  shapeWidth,
-  shapeHeight,
-  width,
-  height,
-  placed,
-  gapPx
-) {
-  let best = null;
-  let bestScore = -Infinity;
+function regionUsage(placed, width, height) {
+  const map = new Map();
 
-  for (let attempt = 0; attempt < 80; attempt++) {
-    const point = edgeCandidate(
-      side,
-      width,
-      height,
-      shapeWidth,
-      shapeHeight
-    );
-
-    const candidate = {
-      x: point.x,
-      y: point.y,
-      radius: candidateRadius(shapeWidth, shapeHeight),
-    };
-
-    const distance = minimumDistance(candidate, placed);
-    const spread = normalizedSpreadScore(
-      candidate,
-      placed,
-      width,
-      height
-    );
-
-    const outside = edgeOutsideAmount(
-      candidate,
-      shapeWidth,
-      shapeHeight,
-      width,
-      height
-    );
-
-    let score =
-      spread * 1000 +
-      Math.min(outside, Math.min(shapeWidth, shapeHeight) * 0.5);
-
-    if (distance >= gapPx) {
-      score += 100000;
-    } else {
-      score -= Math.abs(distance - gapPx) * 12;
-    }
-
-    if (score > bestScore) {
-      bestScore = score;
-      best = candidate;
-    }
-  }
-
-  return best;
-}
-
-function findBestInteriorCandidate(
-  shapeWidth,
-  shapeHeight,
-  width,
-  height,
-  placed,
-  gapPx
-) {
-  let best = null;
-  let bestScore = -Infinity;
-
-  for (let attempt = 0; attempt < 120; attempt++) {
-    const point = interiorCandidate(
-      width,
-      height,
-      shapeWidth,
-      shapeHeight
-    );
-
-    const candidate = {
-      x: point.x,
-      y: point.y,
-      radius: candidateRadius(shapeWidth, shapeHeight),
-    };
-
-    const distance = minimumDistance(candidate, placed);
-    const spread = normalizedSpreadScore(
-      candidate,
-      placed,
-      width,
-      height
-    );
-
-    const normalizedX = point.x / width;
-    const normalizedY = point.y / height;
-
-    const centerDistance =
-      Math.sqrt(
-        Math.pow(normalizedX - 0.5, 2) +
-          Math.pow(normalizedY - 0.5, 2)
+  for (const item of placed) {
+    const key =
+      regionKey(
+        item.x,
+        item.y,
+        width,
+        height
       );
 
-    let score =
-      spread * 1000 +
-      centerDistance * 40;
+    map.set(
+      key,
+      (map.get(key) || 0) + 1
+    );
+  }
 
-    if (distance >= gapPx) {
-      score += 100000;
+  return map;
+}
+
+function centerHoleBonus(candidate, placed, width, height) {
+  const centerX = width / 2;
+  const centerY = height / 2;
+
+  const dx =
+    candidate.x -
+    centerX;
+
+  const dy =
+    candidate.y -
+    centerY;
+
+  const normalized =
+    Math.sqrt(
+      Math.pow(dx / width, 2) +
+      Math.pow(dy / height, 2)
+    );
+
+  let nearestCenterShape =
+    Infinity;
+
+  for (const item of placed) {
+    const ix =
+      item.x -
+      centerX;
+
+    const iy =
+      item.y -
+      centerY;
+
+    const distance =
+      Math.sqrt(
+        Math.pow(ix / width, 2) +
+        Math.pow(iy / height, 2)
+      );
+
+    nearestCenterShape =
+      Math.min(
+        nearestCenterShape,
+        distance
+      );
+  }
+
+  if (
+    nearestCenterShape > 0.24 &&
+    normalized < 0.22
+  ) {
+    return 450;
+  }
+
+  if (normalized < 0.14) {
+    return 80;
+  }
+
+  return 0;
+}
+
+function chooseBestCandidate(
+  rawCandidates,
+  shapeWidth,
+  shapeHeight,
+  placed,
+  width,
+  height,
+  gapPx,
+  requireEdge
+) {
+  const diagonal =
+    Math.sqrt(
+      width * width +
+      height * height
+    );
+
+  const usage =
+    regionUsage(
+      placed,
+      width,
+      height
+    );
+
+  let best = null;
+  let bestScore = -Infinity;
+
+  for (const raw of rawCandidates) {
+    if (
+      requireEdge === true &&
+      !raw.edge
+    ) {
+      continue;
+    }
+
+    if (
+      requireEdge === false &&
+      raw.edge
+    ) {
+      continue;
+    }
+
+    const point =
+      moveEdgeCandidate(
+        raw,
+        shapeWidth,
+        shapeHeight
+      );
+
+    const candidate = {
+      x: point.x,
+      y: point.y,
+      radius:
+        candidateRadius(
+          shapeWidth,
+          shapeHeight
+        ),
+      edge:
+        raw.edge,
+      side:
+        raw.side,
+    };
+
+    const clearance =
+      minimumClearance(
+        candidate,
+        placed
+      );
+
+    const spread =
+      averageDistance(
+        candidate,
+        placed,
+        diagonal
+      );
+
+    const key =
+      regionKey(
+        clamp(candidate.x, 0, width - 0.001),
+        clamp(candidate.y, 0, height - 0.001),
+        width,
+        height
+      );
+
+    const used =
+      usage.get(key) || 0;
+
+    let score =
+      spread * 500 -
+      used * 260;
+
+    if (
+      clearance >=
+      gapPx
+    ) {
+      score += 3000;
     } else {
-      score -= Math.abs(distance - gapPx) * 14;
+      score +=
+        clearance * 8;
+    }
+
+    score +=
+      centerHoleBonus(
+        candidate,
+        placed,
+        width,
+        height
+      );
+
+    if (candidate.edge) {
+      score += 50;
     }
 
     if (score > bestScore) {
@@ -495,7 +678,7 @@ function quantizedRotation(maxRotate) {
     return 0;
   }
 
-  const baseAngles = [
+  const angles = [
     0,
     30,
     45,
@@ -513,72 +696,124 @@ function quantizedRotation(maxRotate) {
     -135,
     -150,
     -180,
-  ].filter((value) => Math.abs(value) <= maxRotate);
+  ].filter(
+    (value) =>
+      Math.abs(value) <=
+      maxRotate
+  );
 
-  if (!baseAngles.length) {
-    return randomBetween(-maxRotate, maxRotate);
+  if (!angles.length) {
+    return randomBetween(
+      -maxRotate,
+      maxRotate
+    );
   }
 
   const base =
-    baseAngles[
-      Math.floor(Math.random() * baseAngles.length)
+    angles[
+      Math.floor(
+        Math.random() *
+        angles.length
+      )
     ];
 
   return clamp(
-    base + randomBetween(-10, 10),
+    base +
+      randomBetween(
+        -9,
+        9
+      ),
     -maxRotate,
     maxRotate
   );
 }
 
-function buildSvg(width, height, settings, assets, color) {
-  if (!Array.isArray(assets) || !assets.length) {
-    throw new Error("SVG şekil listesi boş.");
+function buildSvg(
+  width,
+  height,
+  settings,
+  assets,
+  color
+) {
+  if (
+    !Array.isArray(assets) ||
+    !assets.length
+  ) {
+    throw new Error(
+      "SVG şekil listesi boş."
+    );
   }
 
-  const shortSide = Math.min(width, height);
+  const shortSide =
+    Math.min(
+      width,
+      height
+    );
 
-  const count = clamp(
-    Math.round(Number(settings.count) || 14),
-    1,
-    100
-  );
+  const count =
+    clamp(
+      Math.round(
+        Number(
+          settings.count
+        ) || 14
+      ),
+      1,
+      100
+    );
 
-  const scale = clamp(
-    Number(settings.scale) || 1,
-    0.25,
-    3
-  );
+  const scale =
+    clamp(
+      Number(
+        settings.scale
+      ) || 1,
+      0.25,
+      3
+    );
 
-  const minPercent = clamp(
-    Number(settings.minSize) || 10,
-    2,
-    45
-  );
+  const minPercent =
+    clamp(
+      Number(
+        settings.minSize
+      ) || 10,
+      2,
+      45
+    );
 
-  const maxPercent = clamp(
-    Number(settings.maxSize) || 26,
-    minPercent,
-    60
-  );
+  const maxPercent =
+    clamp(
+      Number(
+        settings.maxSize
+      ) || 26,
+      minPercent,
+      60
+    );
 
-  const gapPercent = clamp(
-    Number(settings.gap) || 2.5,
-    0,
-    20
-  );
+  const gapPercent =
+    clamp(
+      Number(
+        settings.gap
+      ) || 2.5,
+      0,
+      20
+    );
 
-  const maxRotate = clamp(
-    Number(settings.rotate) || 180,
-    0,
-    360
-  );
+  const maxRotate =
+    clamp(
+      Number(
+        settings.rotate
+      ) || 180,
+      0,
+      360
+    );
 
-  const opacity = clamp(
-    Number(settings.opacity) || 0.075,
-    0.001,
-    1
-  );
+  const opacity =
+    clamp(
+      Number(
+        settings.opacity
+      ) || 0.075,
+      0.001,
+      1
+    );
 
   const minSize =
     shortSide *
@@ -594,139 +829,165 @@ function buildSvg(width, height, settings, assets, color) {
     shortSide *
     (gapPercent / 100);
 
-  const ratio = width / height;
+  const edgeCount =
+    Math.min(
+      count,
+      Math.max(
+        Math.min(4, count),
+        Math.round(
+          count * 0.43
+        )
+      )
+    );
 
-  let edgeRatio;
+  const sizes =
+    createSizeSequence(
+      count,
+      minSize,
+      maxSize
+    );
 
-  if (ratio < 0.72) {
-    edgeRatio = 0.48;
-  } else if (ratio > 1.45) {
-    edgeRatio = 0.5;
-  } else {
-    edgeRatio = 0.46;
-  }
+  const nextAsset =
+    createAssetPicker(
+      assets
+    );
 
-  const edgeCount = clamp(
-    Math.round(count * edgeRatio),
-    Math.min(4, count),
-    count
-  );
+  const interiorCandidates =
+    createInteriorCandidates(
+      width,
+      height,
+      550
+    );
 
-  const innerCount = count - edgeCount;
-
-  const sides = createSideSequence(edgeCount);
-
-  const sizes = createSizeSequence(
-    count,
-    minSize,
-    maxSize
-  );
-
-  const nextAsset = createAssetPicker(assets);
-
-  const placements = [];
-
-  for (let i = 0; i < edgeCount; i++) {
-    placements.push({
-      type: "edge",
-      side: sides[i],
-    });
-  }
-
-  for (let i = 0; i < innerCount; i++) {
-    placements.push({
-      type: "inner",
-    });
-  }
-
-  const orderedPlacements = [];
-
-  let edgeIndex = 0;
-  let innerIndex = edgeCount;
-
-  while (orderedPlacements.length < count) {
-    if (edgeIndex < edgeCount) {
-      orderedPlacements.push(placements[edgeIndex]);
-      edgeIndex++;
-    }
-
-    if (innerIndex < placements.length) {
-      orderedPlacements.push(placements[innerIndex]);
-      innerIndex++;
-    }
-
-    if (innerIndex < placements.length) {
-      orderedPlacements.push(placements[innerIndex]);
-      innerIndex++;
-    }
-  }
+  const edgeCandidates =
+    createEdgeCandidates(
+      width,
+      height,
+      220
+    );
 
   const placed = [];
   const elements = [];
 
-  for (let index = 0; index < orderedPlacements.length; index++) {
-    const placement = orderedPlacements[index];
+  let edgePlaced = 0;
 
-    let asset = nextAsset();
-    let candidate = null;
-    let dimensions = null;
+  for (
+    let index = 0;
+    index < count;
+    index++
+  ) {
+    const remaining =
+      count - index;
 
-    for (let attempt = 0; attempt < 16; attempt++) {
-      if (attempt > 0 && attempt % 4 === 0) {
-        asset = nextAsset();
+    const edgeRemaining =
+      edgeCount -
+      edgePlaced;
+
+    let useEdge =
+      edgeRemaining > 0 &&
+      (
+        index % 3 === 0 ||
+        edgeRemaining >=
+          remaining
+      );
+
+    let asset =
+      nextAsset();
+
+    let finalCandidate =
+      null;
+
+    let finalDimensions =
+      null;
+
+    for (
+      let attempt = 0;
+      attempt < 12;
+      attempt++
+    ) {
+      if (
+        attempt > 0 &&
+        attempt % 4 === 0
+      ) {
+        asset =
+          nextAsset();
       }
 
       const aspect =
-        Number(asset.aspect) > 0
-          ? Number(asset.aspect)
+        Number(
+          asset.aspect
+        ) > 0
+          ? Number(
+              asset.aspect
+            )
           : 1;
 
-      const shrink = Math.max(
-        0.72,
-        1 - attempt * 0.018
-      );
+      const shrink =
+        Math.max(
+          0.78,
+          1 -
+            attempt *
+              0.018
+        );
 
-      dimensions = shapeDimensions(
-        sizes[index % sizes.length] * shrink,
-        aspect
-      );
+      const dimensions =
+        shapeDimensions(
+          sizes[index] *
+            shrink,
+          aspect
+        );
 
-      if (placement.type === "edge") {
-        candidate = findBestEdgeCandidate(
-          placement.side,
+      const source =
+        useEdge
+          ? edgeCandidates
+          : interiorCandidates;
+
+      const candidate =
+        chooseBestCandidate(
+          source,
           dimensions.width,
           dimensions.height,
+          placed,
           width,
           height,
-          placed,
-          gapPx
+          gapPx,
+          useEdge
         );
-      } else {
-        candidate = findBestInteriorCandidate(
-          dimensions.width,
-          dimensions.height,
-          width,
-          height,
-          placed,
-          gapPx
-        );
-      }
 
       if (!candidate) {
         continue;
       }
 
-      const distance = minimumDistance(
-        candidate,
-        placed
-      );
+      finalCandidate =
+        candidate;
 
-      if (!placed.length || distance >= gapPx * 0.65) {
+      finalDimensions =
+        dimensions;
+
+      const clearance =
+        minimumClearance(
+          candidate,
+          placed
+        );
+
+      if (
+        !placed.length ||
+        clearance >=
+          gapPx * 0.45
+      ) {
         break;
       }
     }
 
-    if (!candidate || !dimensions) {
+    if (
+      !finalCandidate ||
+      !finalDimensions
+    ) {
+      if (useEdge) {
+        useEdge = false;
+        index--;
+      }
+
       continue;
     }
 
@@ -738,54 +999,83 @@ function buildSvg(width, height, settings, assets, color) {
         height: 100,
       };
 
-    const sourceWidth = Math.max(
-      1,
-      Number(viewBox.width) || 100
-    );
+    const sourceWidth =
+      Math.max(
+        1,
+        Number(
+          viewBox.width
+        ) || 100
+      );
 
-    const sourceHeight = Math.max(
-      1,
-      Number(viewBox.height) || 100
-    );
+    const sourceHeight =
+      Math.max(
+        1,
+        Number(
+          viewBox.height
+        ) || 100
+      );
 
     const scaleX =
-      dimensions.width /
+      finalDimensions.width /
       sourceWidth;
 
     const scaleY =
-      dimensions.height /
+      finalDimensions.height /
       sourceHeight;
 
     const rotation =
-      quantizedRotation(maxRotate);
+      quantizedRotation(
+        maxRotate
+      );
 
     const transform = [
-      `translate(${candidate.x.toFixed(3)} ${candidate.y.toFixed(3)})`,
+      `translate(${finalCandidate.x.toFixed(3)} ${finalCandidate.y.toFixed(3)})`,
       `rotate(${rotation.toFixed(3)})`,
-      `translate(${(-dimensions.width / 2).toFixed(3)} ${(-dimensions.height / 2).toFixed(3)})`,
+      `translate(${(-finalDimensions.width / 2).toFixed(3)} ${(-finalDimensions.height / 2).toFixed(3)})`,
       `scale(${scaleX.toFixed(6)} ${scaleY.toFixed(6)})`,
       `translate(${(-Number(viewBox.x || 0)).toFixed(3)} ${(-Number(viewBox.y || 0)).toFixed(3)})`,
     ].join(" ");
 
     elements.push(`
-      <g data-shape-id="${escapeXmlAttribute(
-        asset.shapeId ||
-          asset.src ||
-          ""
-      )}" transform="${transform}">
-        ${cleanSvgContent(asset.content)}
+      <g
+        data-shape-id="${escapeXmlAttribute(
+          asset.shapeId ||
+            asset.src ||
+            ""
+        )}"
+        transform="${transform}"
+      >
+        ${cleanSvgContent(
+          asset.content
+        )}
       </g>
     `);
 
     placed.push({
-      x: candidate.x,
-      y: candidate.y,
-      radius: candidate.radius,
+      x:
+        finalCandidate.x,
+
+      y:
+        finalCandidate.y,
+
+      radius:
+        finalCandidate.radius,
+
+      edge:
+        finalCandidate.edge,
     });
+
+    if (
+      finalCandidate.edge
+    ) {
+      edgePlaced++;
+    }
   }
 
   if (!elements.length) {
-    throw new Error("Şekiller yerleştirilemedi.");
+    throw new Error(
+      "Şekiller yerleştirilemedi."
+    );
   }
 
   return {
@@ -796,6 +1086,16 @@ function buildSvg(width, height, settings, assets, color) {
         height="${height}"
         viewBox="0 0 ${width} ${height}"
       >
+
+        <rect
+          x="0"
+          y="0"
+          width="${width}"
+          height="${height}"
+          fill="#000000"
+          opacity="0.0001"
+        />
+
         <defs>
           <clipPath id="random-background-clip">
             <rect
@@ -807,15 +1107,6 @@ function buildSvg(width, height, settings, assets, color) {
           </clipPath>
         </defs>
 
-        <rect
-          x="0"
-          y="0"
-          width="${width}"
-          height="${height}"
-          fill="#000000"
-          fill-opacity="0.000001"
-        />
-
         <g
           clip-path="url(#random-background-clip)"
           color="${color}"
@@ -826,29 +1117,38 @@ function buildSvg(width, height, settings, assets, color) {
         >
           ${elements.join("")}
         </g>
+
       </svg>
     `,
 
-    placedCount: elements.length,
+    placedCount:
+      elements.length,
   };
 }
 
 function canContain(shape) {
   return (
     shape &&
-    typeof shape.appendChild === "function"
+    typeof shape.appendChild ===
+      "function"
   );
 }
 
 function removePreviousBackground(container) {
   if (
     !container ||
-    !Array.isArray(container.children)
+    !Array.isArray(
+      container.children
+    )
   ) {
     return;
   }
 
-  for (const child of [...container.children]) {
+  for (
+    const child of [
+      ...container.children,
+    ]
+  ) {
     try {
       if (
         child.getPluginData(
@@ -861,84 +1161,136 @@ function removePreviousBackground(container) {
   }
 }
 
-function canContain(shape) {
-  return shape && typeof shape.appendChild === "function";
+function alignInsideParent(
+  background
+) {
+  const dx =
+    Number(
+      background.parentX
+    ) || 0;
+
+  const dy =
+    Number(
+      background.parentY
+    ) || 0;
+
+  background.x -= dx;
+  background.y -= dy;
 }
 
-function removePreviousBackground(container) {
-  if (!container || !Array.isArray(container.children)) {
-    return;
-  }
+function alignToShape(
+  target,
+  background
+) {
+  const dx =
+    Number(target.x) -
+    Number(background.x);
 
-  for (const child of [...container.children]) {
-    try {
-      if (child.getPluginData("random-svg-background") === "1") {
-        child.remove();
-      }
-    } catch (_) {}
-  }
+  const dy =
+    Number(target.y) -
+    Number(background.y);
+
+  background.x += dx;
+  background.y += dy;
 }
 
-function addBackgroundToTarget(target, background, replaceExisting) {
-  const targetX = Number(target.x) || 0;
-  const targetY = Number(target.y) || 0;
-
+function addBackgroundToTarget(
+  target,
+  background,
+  replaceExisting
+) {
   if (canContain(target)) {
     if (replaceExisting) {
-      removePreviousBackground(target);
+      removePreviousBackground(
+        target
+      );
     }
 
-    if (typeof target.insertChild === "function") {
-      target.insertChild(0, background);
+    if (
+      typeof target.insertChild ===
+      "function"
+    ) {
+      target.insertChild(
+        0,
+        background
+      );
     } else {
-      target.appendChild(background);
+      target.appendChild(
+        background
+      );
     }
 
-    background.x = targetX;
-    background.y = targetY;
+    alignInsideParent(
+      background
+    );
 
-    if (typeof background.sendToBack === "function") {
+    if (
+      typeof background.sendToBack ===
+      "function"
+    ) {
       background.sendToBack();
     }
 
     return;
   }
 
-  const parent = target.parent;
+  const parent =
+    target.parent;
 
-  if (parent && canContain(parent)) {
+  if (
+    parent &&
+    canContain(parent)
+  ) {
     if (replaceExisting) {
-      removePreviousBackground(parent);
+      removePreviousBackground(
+        parent
+      );
     }
 
-    if (typeof parent.insertChild === "function") {
+    if (
+      typeof parent.insertChild ===
+      "function"
+    ) {
       parent.insertChild(
-        Math.max(0, Number(target.parentIndex) || 0),
+        Math.max(
+          0,
+          Number(
+            target.parentIndex
+          ) || 0
+        ),
         background
       );
     } else {
-      parent.appendChild(background);
+      parent.appendChild(
+        background
+      );
     }
 
-    background.x = targetX;
-    background.y = targetY;
+    alignToShape(
+      target,
+      background
+    );
 
-    if (typeof background.sendBackward === "function") {
+    if (
+      typeof background.sendBackward ===
+      "function"
+    ) {
       background.sendBackward();
     }
 
     return;
   }
 
-  background.x = targetX;
-  background.y = targetY;
-
-  if (typeof background.sendToBack === "function") {
-    background.sendToBack();
-  }
+  alignToShape(
+    target,
+    background
+  );
 }
 
-function createBackground(settings, assets) {
+function createBackground(
+  settings,
+  assets
+) {
   const selection =
     penpot.selection;
 
@@ -954,29 +1306,38 @@ function createBackground(settings, assets) {
   const target =
     selection[0];
 
-  const width = Math.max(
-    1,
-    Number(target.width) || 1
-  );
+  const width =
+    Math.max(
+      1,
+      Number(
+        target.width
+      ) || 1
+    );
 
-  const height = Math.max(
-    1,
-    Number(target.height) || 1
-  );
+  const height =
+    Math.max(
+      1,
+      Number(
+        target.height
+      ) || 1
+    );
 
   const color =
     settings.autoColor
-      ? getAutoColor(target)
+      ? getAutoColor(
+          target
+        )
       : settings.color ||
         "#FFFFFF";
 
-  const result = buildSvg(
-    width,
-    height,
-    settings,
-    assets,
-    color
-  );
+  const result =
+    buildSvg(
+      width,
+      height,
+      settings,
+      assets,
+      color
+    );
 
   const background =
     penpot.createShapeFromSvg(
@@ -1002,15 +1363,21 @@ function createBackground(settings, assets) {
   addBackgroundToTarget(
     target,
     background,
-    settings.replaceExisting !== false
+    settings.replaceExisting !==
+      false
   );
 
-  penpot.selection = [target];
+  penpot.selection = [
+    target,
+  ];
 
   penpot.ui.sendMessage({
-    source: "penpot",
-    type: "status",
-    ok: true,
+    type:
+      "status",
+
+    ok:
+      true,
+
     message:
       `${result.placedCount} şekil oluşturuldu.`,
   });
@@ -1022,12 +1389,12 @@ function sendSelectionInfo() {
     null;
 
   penpot.ui.sendMessage({
-    source: "penpot",
-    type: "selection",
+    type:
+      "selection",
 
     count:
-      penpot.selection?.length ||
-      0,
+      penpot.selection
+        ?.length || 0,
 
     name:
       target?.name || "",
@@ -1040,58 +1407,70 @@ function sendSelectionInfo() {
 
     autoColor:
       target
-        ? getAutoColor(target)
+        ? getAutoColor(
+            target
+          )
         : "#FFFFFF",
   });
 }
 
-penpot.ui.onMessage((message) => {
-  if (
-    !message ||
-    typeof message !== "object"
-  ) {
-    return;
-  }
+penpot.ui.onMessage(
+  (message) => {
+    if (
+      !message ||
+      typeof message !==
+        "object"
+    ) {
+      return;
+    }
 
-  if (message.type === "generate") {
-    try {
-      createBackground(
-        message.settings || {},
-        message.assets || []
-      );
-    } catch (error) {
-      console.error(
-        "[Random SVG Background]",
-        error
-      );
+    if (
+      message.type ===
+      "generate"
+    ) {
+      try {
+        createBackground(
+          message.settings ||
+            {},
+          message.assets ||
+            []
+        );
+      } catch (error) {
+        console.error(
+          "[Random SVG Background]",
+          error
+        );
 
-      penpot.ui.sendMessage({
-        source: "penpot",
-        type: "status",
-        ok: false,
+        penpot.ui.sendMessage({
+          type:
+            "status",
 
-        message:
-          error instanceof Error
-            ? error.message
-            : "Beklenmeyen bir hata oluştu.",
-      });
+          ok:
+            false,
+
+          message:
+            error instanceof Error
+              ? error.message
+              : "Beklenmeyen bir hata oluştu.",
+        });
+      }
+    }
+
+    if (
+      message.type ===
+      "selection-info"
+    ) {
+      sendSelectionInfo();
+    }
+
+    if (
+      message.type ===
+      "close"
+    ) {
+      penpot.closePlugin();
     }
   }
-
-  if (
-    message.type ===
-    "selection-info"
-  ) {
-    sendSelectionInfo();
-  }
-
-  if (
-    message.type ===
-    "close"
-  ) {
-    penpot.closePlugin();
-  }
-});
+);
 
 penpot.on(
   "selectionchange",
