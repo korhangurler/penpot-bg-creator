@@ -861,204 +861,79 @@ function removePreviousBackground(container) {
   }
 }
 
-function centerBackgroundOnTarget(
-  target,
-  background
-) {
-  const targetCenterX =
-    Number(target.x || 0) +
-    Number(target.width || 0) / 2;
-
-  const targetCenterY =
-    Number(target.y || 0) +
-    Number(target.height || 0) / 2;
-
-  const backgroundWidth =
-    Number(background.width || 0);
-
-  const backgroundHeight =
-    Number(background.height || 0);
-
-  background.x =
-    targetCenterX -
-    backgroundWidth / 2;
-
-  background.y =
-    targetCenterY -
-    backgroundHeight / 2;
+function canContain(shape) {
+  return shape && typeof shape.appendChild === "function";
 }
 
-function addBackgroundToTarget(
-  target,
-  background,
-  replaceExisting
-) {
-  const originalX =
-    Number(target.x || 0);
+function removePreviousBackground(container) {
+  if (!container || !Array.isArray(container.children)) {
+    return;
+  }
 
-  const originalY =
-    Number(target.y || 0);
+  for (const child of [...container.children]) {
+    try {
+      if (child.getPluginData("random-svg-background") === "1") {
+        child.remove();
+      }
+    } catch (_) {}
+  }
+}
 
-  const originalWidth =
-    Number(target.width || 0);
-
-  const originalHeight =
-    Number(target.height || 0);
-
-  const targetCenterX =
-    originalX +
-    originalWidth / 2;
-
-  const targetCenterY =
-    originalY +
-    originalHeight / 2;
+function addBackgroundToTarget(target, background, replaceExisting) {
+  const targetX = Number(target.x) || 0;
+  const targetY = Number(target.y) || 0;
 
   if (canContain(target)) {
     if (replaceExisting) {
       removePreviousBackground(target);
     }
 
-    if (
-      typeof target.insertChild ===
-      "function"
-    ) {
-      target.insertChild(
-        0,
-        background
-      );
+    if (typeof target.insertChild === "function") {
+      target.insertChild(0, background);
     } else {
       target.appendChild(background);
     }
 
-    const backgroundWidth =
-      Number(
-        background.width || originalWidth
-      );
+    background.x = targetX;
+    background.y = targetY;
 
-    const backgroundHeight =
-      Number(
-        background.height || originalHeight
-      );
-
-    const candidates = [
-      {
-        x:
-          (originalWidth -
-            backgroundWidth) /
-          2,
-
-        y:
-          (originalHeight -
-            backgroundHeight) /
-          2,
-      },
-      {
-        x:
-          targetCenterX -
-          backgroundWidth / 2,
-
-        y:
-          targetCenterY -
-          backgroundHeight / 2,
-      },
-    ];
-
-    const localCandidate =
-      candidates[0];
-
-    const globalCandidate =
-      candidates[1];
-
-    const localDistance =
-      Math.abs(
-        Number(background.x || 0) -
-          localCandidate.x
-      ) +
-      Math.abs(
-        Number(background.y || 0) -
-          localCandidate.y
-      );
-
-    const globalDistance =
-      Math.abs(
-        Number(background.x || 0) -
-          globalCandidate.x
-      ) +
-      Math.abs(
-        Number(background.y || 0) -
-          globalCandidate.y
-      );
-
-    const selected =
-      localDistance <= globalDistance
-        ? localCandidate
-        : globalCandidate;
-
-    background.x = selected.x;
-    background.y = selected.y;
-
-    if (
-      typeof background.sendToBack ===
-      "function"
-    ) {
+    if (typeof background.sendToBack === "function") {
       background.sendToBack();
     }
 
     return;
   }
 
-  const parent =
-    target.parent;
+  const parent = target.parent;
 
-  if (
-    parent &&
-    canContain(parent)
-  ) {
+  if (parent && canContain(parent)) {
     if (replaceExisting) {
       removePreviousBackground(parent);
     }
 
-    if (
-      typeof parent.insertChild ===
-      "function"
-    ) {
+    if (typeof parent.insertChild === "function") {
       parent.insertChild(
-        Math.max(
-          0,
-          Number(
-            target.parentIndex
-          ) || 0
-        ),
+        Math.max(0, Number(target.parentIndex) || 0),
         background
       );
     } else {
       parent.appendChild(background);
     }
 
-    centerBackgroundOnTarget(
-      target,
-      background
-    );
+    background.x = targetX;
+    background.y = targetY;
 
-    if (
-      typeof background.sendBackward ===
-      "function"
-    ) {
+    if (typeof background.sendBackward === "function") {
       background.sendBackward();
     }
 
     return;
   }
 
-  centerBackgroundOnTarget(
-    target,
-    background
-  );
+  background.x = targetX;
+  background.y = targetY;
 
-  if (
-    typeof background.sendToBack ===
-    "function"
-  ) {
+  if (typeof background.sendToBack === "function") {
     background.sendToBack();
   }
 }
